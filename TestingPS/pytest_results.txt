@@ -1,0 +1,35 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0 -- /opt/pyvenv/bin/python
+cachedir: .pytest_cache
+metadata: {'Python': '3.13.5', 'Platform': 'Linux-6.18.55-x86_64-with-glibc2.41', 'Packages': {'pytest': '9.0.2', 'pluggy': '1.6.0'}, 'Plugins': {'anyio': '4.13.0', 'ddtrace': '4.4.0', 'Faker': '40.1.2', 'asyncio': '1.3.0', 'cov': '7.0.0', 'json-report': '1.5.0', 'metadata': '3.1.1'}, 'PLATFORM': 'linux/amd64', 'CI': 'true'}
+rootdir: /mnt/data/Vasilenko_Ilya_lab1
+plugins: anyio-4.13.0, ddtrace-4.4.0, Faker-40.1.2, asyncio-1.3.0, cov-7.0.0, json-report-1.5.0, metadata-3.1.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 24 items
+
+test_order_total.py::test_tc01_regular_paid_delivery PASSED              [  4%]
+test_order_total.py::test_tc02_regular_zero_delivery PASSED              [  8%]
+test_order_total.py::test_tc03_premium_paid_delivery PASSED              [ 12%]
+test_order_total.py::test_tc04_premium_free_delivery PASSED              [ 16%]
+test_order_total.py::test_tc05_free_delivery_at_threshold PASSED         [ 20%]
+test_order_total.py::test_tc06_paid_delivery_below_threshold PASSED      [ 25%]
+test_order_total.py::test_tc07_free_delivery_above_threshold PASSED      [ 29%]
+test_order_total.py::test_tc08_minimum_quantity PASSED                   [ 33%]
+test_order_total.py::test_tc09_maximum_quantity PASSED                   [ 37%]
+test_order_total.py::test_tc10_small_positive_price PASSED               [ 41%]
+test_order_total.py::test_tc11_rounding_to_two_digits PASSED             [ 45%]
+test_order_total.py::test_tc12_free_delivery_uses_subtotal_before_discount PASSED [ 50%]
+test_order_total.py::test_tc13_zero_item_price PASSED                    [ 54%]
+test_order_total.py::test_tc14_negative_item_price PASSED                [ 58%]
+test_order_total.py::test_tc15_string_item_price PASSED                  [ 62%]
+test_order_total.py::test_tc16_boolean_item_price PASSED                 [ 66%]
+test_order_total.py::test_tc17_zero_quantity PASSED                      [ 70%]
+test_order_total.py::test_tc18_quantity_above_maximum PASSED             [ 75%]
+test_order_total.py::test_tc19_non_integer_quantity PASSED               [ 79%]
+test_order_total.py::test_tc20_boolean_quantity PASSED                   [ 83%]
+test_order_total.py::test_tc21_invalid_user_type PASSED                  [ 87%]
+test_order_total.py::test_tc22_negative_delivery_cost PASSED             [ 91%]
+test_order_total.py::test_tc23_string_delivery_cost PASSED               [ 95%]
+test_order_total.py::test_tc24_boolean_delivery_cost PASSED              [100%]
+
+============================== 24 passed in 0.09s ==============================
