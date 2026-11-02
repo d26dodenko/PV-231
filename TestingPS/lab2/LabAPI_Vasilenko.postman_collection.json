@@ -1,0 +1,966 @@
+{
+  "info": {
+    "_postman_id": "db780583-f1b2-463d-a0d6-b03a16edba71",
+    "name": "LabAPI_Vasilenko",
+    "description": "Лабораторная работа №2. Интеграционное и API-тестирование Restful-Booker. Василенко Илья, ПВ-231. Запускать коллекцию сверху вниз с выбранным окружением LabAPI_Vasilenko_Env.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "TC-AUTH-01 — Получить токен",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth",
+            "description": "**Цель:** Получить токен для защищённых запросов\n\n**Входные данные:** admin / password123\n\n**Ожидаемый результат:** 200 OK и непустой token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP: ожидается 200\", () => { pm.response.to.have.status(200); });",
+                  "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                  "pm.test(\"Ответ соответствует сценарию\", () => { const obj = pm.response.json(); pm.expect(obj.token).to.be.a(\"string\").and.not.empty; });",
+                  "pm.test(\"Токен сохранён в окружение\", () => { const token = pm.response.json().token; pm.environment.set(\"token\", token); pm.expect(pm.environment.get(\"token\")).to.equal(token); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TC-AUTH-02 — Неверный пароль",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth",
+            "description": "**Цель:** Проверить отказ при неправильной аутентификации\n\n**Входные данные:** admin / incorrect_password\n\n**Ожидаемый результат:** 401 Unauthorized (REST-ожидание; сервис может вернуть 200).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"incorrect_password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP: ожидается 401\", () => { pm.response.to.have.status(401); });",
+                  "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                  "pm.test(\"Ответ соответствует сценарию\", () => { pm.expect(pm.response.json()).to.have.property(\"reason\"); });",
+                  "pm.test(\"Запрос отклонён HTTP-кодом\", () => { pm.expect(pm.response.code).to.be.at.least(400); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Booking",
+      "item": [
+        {
+          "name": "01. Основная цепочка",
+          "item": [
+            {
+              "name": "TC-BOOK-01 — Создать бронирование",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking",
+                "description": "**Цель:** Создать бронирование и сохранить его идентификатор\n\n**Входные данные:** Корректный JSON с именем Ilya и фамилией Vasilenko\n\n**Ожидаемый результат:** 200 OK, поле bookingid.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstname\": \"Ilya\",\n  \"lastname\": \"Vasilenko\",\n  \"totalprice\": 180,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2026-11-10\",\n    \"checkout\": \"2026-11-12\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 200\", () => { pm.response.to.have.status(200); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { const obj = pm.response.json(); pm.expect(obj.bookingid).to.be.a(\"number\"); pm.expect(obj.booking.firstname).to.equal(\"Ilya\"); });",
+                      "pm.test(\"bookingId сохранён\", () => { const id = pm.response.json().bookingid; pm.environment.set(\"bookingId\", String(id)); pm.expect(pm.environment.get(\"bookingId\")).to.equal(String(id)); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BOOK-02 — Список бронирований",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking",
+                "description": "**Цель:** Запросить идентификаторы всех бронирований\n\n**Входные данные:** Без фильтров, бронирование создано в предыдущем запросе\n\n**Ожидаемый результат:** 200 OK и массив идентификаторов."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 200\", () => { pm.response.to.have.status(200); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { const a = pm.response.json(); pm.expect(a).to.be.an(\"array\"); pm.expect(a.some(x => String(x.bookingid) === pm.environment.get(\"bookingId\"))).to.be.true; });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BOOK-03 — Получить созданное бронирование",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking/{{bookingId}}",
+                "description": "**Цель:** Проверить чтение созданного бронирования\n\n**Входные данные:** bookingId из окружения\n\n**Ожидаемый результат:** 200 OK и исходные данные."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 200\", () => { pm.response.to.have.status(200); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { const obj = pm.response.json(); pm.expect(obj.firstname).to.equal(\"Ilya\"); pm.expect(obj.lastname).to.equal(\"Vasilenko\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BOOK-04 — Полное обновление PUT",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Cookie",
+                    "value": "token={{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking/{{bookingId}}",
+                "description": "**Цель:** Проверить замену данных существующего бронирования\n\n**Входные данные:** Cookie token, firstname = IlyaUpdated, totalprice = 230\n\n**Ожидаемый результат:** 200 OK и обновлённые данные.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstname\": \"IlyaUpdated\",\n  \"lastname\": \"Vasilenko\",\n  \"totalprice\": 230,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2026-11-10\",\n    \"checkout\": \"2026-11-12\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 200\", () => { pm.response.to.have.status(200); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { const obj = pm.response.json(); pm.expect(obj.firstname).to.equal(\"IlyaUpdated\"); pm.expect(obj.totalprice).to.equal(230); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BOOK-05 — Проверка после PUT",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking/{{bookingId}}",
+                "description": "**Цель:** Проверить сохранение результатов PUT\n\n**Входные данные:** bookingId из окружения\n\n**Ожидаемый результат:** 200 OK и новые значения."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 200\", () => { pm.response.to.have.status(200); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { const obj = pm.response.json(); pm.expect(obj.firstname).to.equal(\"IlyaUpdated\"); pm.expect(obj.totalprice).to.equal(230); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BOOK-06 — Частичное обновление PATCH",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Cookie",
+                    "value": "token={{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking/{{bookingId}}",
+                "description": "**Цель:** Изменить одно поле без замены других\n\n**Входные данные:** Cookie token, firstname = IlyaPatched\n\n**Ожидаемый результат:** 200 OK, обновлён firstname и сохранён totalprice.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstname\": \"IlyaPatched\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 200\", () => { pm.response.to.have.status(200); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { const obj = pm.response.json(); pm.expect(obj.firstname).to.equal(\"IlyaPatched\"); pm.expect(obj.totalprice).to.equal(230); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BOOK-07 — Проверка после PATCH",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking/{{bookingId}}",
+                "description": "**Цель:** Проверить сохранение результата PATCH\n\n**Входные данные:** bookingId из окружения\n\n**Ожидаемый результат:** 200 OK, новое имя и прежняя цена."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 200\", () => { pm.response.to.have.status(200); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { const obj = pm.response.json(); pm.expect(obj.firstname).to.equal(\"IlyaPatched\"); pm.expect(obj.totalprice).to.equal(230); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BOOK-08 — PUT без токена",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking/{{bookingId}}",
+                "description": "**Цель:** Проверить запрет обновления без авторизации\n\n**Входные данные:** Существующий bookingId, Cookie отсутствует\n\n**Ожидаемый результат:** 403 Forbidden.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstname\": \"Unauthorized\",\n  \"lastname\": \"Vasilenko\",\n  \"totalprice\": 180,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2026-11-10\",\n    \"checkout\": \"2026-11-12\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 403\", () => { pm.response.to.have.status(403); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { pm.expect(pm.response.text()).to.include(\"Forbidden\"); });",
+                      "pm.test(\"Запрос отклонён HTTP-кодом\", () => { pm.expect(pm.response.code).to.be.at.least(400); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BOOK-09 — PUT с неверным токеном",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Cookie",
+                    "value": "token=invalid_token"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking/{{bookingId}}",
+                "description": "**Цель:** Проверить запрет обновления с неправильным токеном\n\n**Входные данные:** Cookie: token=invalid_token\n\n**Ожидаемый результат:** 403 Forbidden.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstname\": \"BadToken\",\n  \"lastname\": \"Vasilenko\",\n  \"totalprice\": 180,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2026-11-10\",\n    \"checkout\": \"2026-11-12\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 403\", () => { pm.response.to.have.status(403); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { pm.expect(pm.response.text()).to.include(\"Forbidden\"); });",
+                      "pm.test(\"Запрос отклонён HTTP-кодом\", () => { pm.expect(pm.response.code).to.be.at.least(400); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BOOK-10 — Удалить бронирование",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Cookie",
+                    "value": "token={{token}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking/{{bookingId}}",
+                "description": "**Цель:** Удалить созданное бронирование\n\n**Входные данные:** Корректный token и bookingId\n\n**Ожидаемый результат:** 201 Created (фактическая специфика Restful-Booker)."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 201\", () => { pm.response.to.have.status(201); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { pm.expect(pm.response.code).to.be.within(200,299); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BOOK-11 — Проверка удаления",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking/{{bookingId}}",
+                "description": "**Цель:** Убедиться, что удалённое бронирование недоступно\n\n**Входные данные:** Тот же bookingId после удаления\n\n**Ожидаемый результат:** 404 Not Found."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 404\", () => { pm.response.to.have.status(404); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { pm.expect(pm.response.text()).to.have.length.greaterThan(0); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "02. Негативные",
+          "item": [
+            {
+              "name": "TC-BOOK-12 — Несуществующий ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking/999999999",
+                "description": "**Цель:** Проверить обращение к отсутствующему бронированию\n\n**Входные данные:** bookingId = 999999999\n\n**Ожидаемый результат:** 404 Not Found."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 404\", () => { pm.response.to.have.status(404); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { pm.expect(pm.response.text()).to.have.length.greaterThan(0); });",
+                      "pm.test(\"Запрос отклонён HTTP-кодом\", () => { pm.expect(pm.response.code).to.be.at.least(400); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BOOK-13 — Сломанный JSON",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking",
+                "description": "**Цель:** Проверить отказ на синтаксически неверный JSON\n\n**Входные данные:** Тело: {bad json\n\n**Ожидаемый результат:** 400 Bad Request.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{bad json",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 400\", () => { pm.response.to.have.status(400); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { pm.expect(pm.response.text()).to.have.length.greaterThan(0); });",
+                      "pm.test(\"Запрос отклонён HTTP-кодом\", () => { pm.expect(pm.response.code).to.be.at.least(400); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BOOK-14 — Неверный тип totalprice",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking",
+                "description": "**Цель:** Проверить типизацию числового поля\n\n**Входные данные:** totalprice = \"abc\"\n\n**Ожидаемый результат:** 400 Bad Request (гипотеза валидации).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstname\": \"Ilya\",\n  \"lastname\": \"Vasilenko\",\n  \"totalprice\": \"abc\",\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2026-11-10\",\n    \"checkout\": \"2026-11-12\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 400\", () => { pm.response.to.have.status(400); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { pm.expect(pm.response.text()).to.have.length.greaterThan(0); });",
+                      "pm.test(\"Запрос отклонён HTTP-кодом\", () => { pm.expect(pm.response.code).to.be.at.least(400); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BOOK-15 — Пропущен firstname",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking",
+                "description": "**Цель:** Проверить обязательность поля firstname\n\n**Входные данные:** Нет ключа firstname в JSON\n\n**Ожидаемый результат:** 400 Bad Request (ожидаемая клиентская ошибка).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"lastname\": \"Vasilenko\",\n  \"totalprice\": 180,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2026-11-10\",\n    \"checkout\": \"2026-11-12\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 400\", () => { pm.response.to.have.status(400); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { pm.expect(pm.response.text()).to.have.length.greaterThan(0); });",
+                      "pm.test(\"Запрос отклонён HTTP-кодом\", () => { pm.expect(pm.response.code).to.be.at.least(400); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "03. Граничные значения",
+          "item": [
+            {
+              "name": "TC-BV-01 — Пустое firstname",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking",
+                "description": "**Цель:** Проверить обработку граничных значений полей\n\n**Входные данные:** firstname = пустая строка\n\n**Ожидаемый результат:** 400 Bad Request (гипотеза валидации).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstname\": \"\",\n  \"lastname\": \"Vasilenko\",\n  \"totalprice\": 180,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2026-11-10\",\n    \"checkout\": \"2026-11-12\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 400\", () => { pm.response.to.have.status(400); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { pm.expect(pm.response.text()).to.have.length.greaterThan(0); });",
+                      "pm.test(\"Запрос отклонён HTTP-кодом\", () => { pm.expect(pm.response.code).to.be.at.least(400); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BV-02 — Очень длинное firstname",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking",
+                "description": "**Цель:** Проверить обработку граничных значений полей\n\n**Входные данные:** firstname длиной 1001 символ\n\n**Ожидаемый результат:** 400 Bad Request (гипотеза ограничения длины).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstname\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\n  \"lastname\": \"Vasilenko\",\n  \"totalprice\": 180,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2026-11-10\",\n    \"checkout\": \"2026-11-12\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 400\", () => { pm.response.to.have.status(400); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { pm.expect(pm.response.text()).to.have.length.greaterThan(0); });",
+                      "pm.test(\"Запрос отклонён HTTP-кодом\", () => { pm.expect(pm.response.code).to.be.at.least(400); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BV-03 — Нулевая цена",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking",
+                "description": "**Цель:** Проверить обработку граничных значений полей\n\n**Входные данные:** totalprice = 0\n\n**Ожидаемый результат:** 200 OK.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstname\": \"Ilya\",\n  \"lastname\": \"Vasilenko\",\n  \"totalprice\": 0,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2026-11-10\",\n    \"checkout\": \"2026-11-12\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 200\", () => { pm.response.to.have.status(200); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { const obj = pm.response.json(); pm.expect(obj.bookingid).to.be.a(\"number\"); pm.expect(obj.booking.totalprice).to.equal(0); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BV-04 — Отрицательная цена",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking",
+                "description": "**Цель:** Проверить обработку граничных значений полей\n\n**Входные данные:** totalprice = -1\n\n**Ожидаемый результат:** 400 Bad Request (гипотеза валидации).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstname\": \"Ilya\",\n  \"lastname\": \"Vasilenko\",\n  \"totalprice\": -1,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2026-11-10\",\n    \"checkout\": \"2026-11-12\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 400\", () => { pm.response.to.have.status(400); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { pm.expect(pm.response.text()).to.have.length.greaterThan(0); });",
+                      "pm.test(\"Запрос отклонён HTTP-кодом\", () => { pm.expect(pm.response.code).to.be.at.least(400); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BV-05 — Большая цена",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking",
+                "description": "**Цель:** Проверить обработку граничных значений полей\n\n**Входные данные:** totalprice = 999999999\n\n**Ожидаемый результат:** 200 OK.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstname\": \"Ilya\",\n  \"lastname\": \"Vasilenko\",\n  \"totalprice\": 999999999,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2026-11-10\",\n    \"checkout\": \"2026-11-12\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 200\", () => { pm.response.to.have.status(200); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { const obj = pm.response.json(); pm.expect(obj.bookingid).to.be.a(\"number\"); pm.expect(obj.booking.totalprice).to.equal(999999999); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BV-06 — Даты в обратном порядке",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking",
+                "description": "**Цель:** Проверить обработку граничных значений полей\n\n**Входные данные:** checkout раньше checkin\n\n**Ожидаемый результат:** 400 Bad Request (гипотеза бизнес-валидации).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstname\": \"Ilya\",\n  \"lastname\": \"Vasilenko\",\n  \"totalprice\": 180,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2026-11-12\",\n    \"checkout\": \"2026-11-10\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 400\", () => { pm.response.to.have.status(400); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { pm.expect(pm.response.text()).to.have.length.greaterThan(0); });",
+                      "pm.test(\"Запрос отклонён HTTP-кодом\", () => { pm.expect(pm.response.code).to.be.at.least(400); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TC-BV-07 — Невалидная дата",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/booking",
+                "description": "**Цель:** Проверить обработку граничных значений полей\n\n**Входные данные:** checkin = 2026-13-45\n\n**Ожидаемый результат:** 400 Bad Request (гипотеза валидации дат).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstname\": \"Ilya\",\n  \"lastname\": \"Vasilenko\",\n  \"totalprice\": 180,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2026-13-45\",\n    \"checkout\": \"2026-11-12\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HTTP: ожидается 400\", () => { pm.response.to.have.status(400); });",
+                      "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                      "pm.test(\"Ответ соответствует сценарию\", () => { pm.expect(pm.response.text()).to.have.length.greaterThan(0); });",
+                      "pm.test(\"Запрос отклонён HTTP-кодом\", () => { pm.expect(pm.response.code).to.be.at.least(400); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "TC-PING-01 — Проверка доступности API",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/ping",
+            "description": "**Цель:** Проверить доступность учебного сервиса\n\n**Входные данные:** Без тела и параметров\n\n**Ожидаемый результат:** 201 Created (по поведению и документации Restful-Booker)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP: ожидается 201\", () => { pm.response.to.have.status(201); });",
+                  "pm.test(\"Время ответа менее 5000 мс\", () => { pm.expect(pm.response.responseTime).to.be.below(5000); });",
+                  "pm.test(\"Ответ соответствует сценарию\", () => { pm.expect(pm.response.code).to.be.within(200,299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
