@@ -1,0 +1,1348 @@
+{
+  "info": {
+    "_postman_id": "c49f66af-de44-4ce7-a326-27869623bf3b",
+    "name": "LabAPI_Саввин",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Лабораторная работа №2. Саввин Богдан, ПВ-231. Тестирование Restful-Booker: 31 позитивный, негативный и граничный сценарий. Запускать всю коллекцию последовательно, одна итерация. Изменяется только запись, созданная в текущем прогоне."
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.environment.set(\"longString\", \"A\".repeat(1001));",
+          "if (pm.request.url.toString().includes(\"{{bookingId}}\")) {",
+          "  const id = pm.environment.get(\"bookingId\");",
+          "  if (!/^[1-9][0-9]*$/.test(String(id || \"\"))) { console.error(\"Нет собственного bookingId. Сначала выполните P02 и P03.\"); pm.execution.skipRequest(); }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "P01 Доступность сервиса",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/ping",
+            "description": "ID: P01\nЦель: Доступность сервиса.\nВходные данные: нет.\nОжидаемый результат: HTTP 201; текст Created.\nОснование ожидания: документация Restful-Booker."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P01: HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"P01: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"P01: тело Created\", () => { pm.expect(pm.response.text()).to.equal(\"Created\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "P02 Получение токена",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/auth",
+            "description": "ID: P02\nЦель: Получение токена.\nВходные данные: admin / password123.\nОжидаемый результат: HTTP 200; непустой строковый token; сохранить token.\nОснование ожидания: документация Restful-Booker.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set(\"token\", \"\");",
+                  "pm.environment.set(\"bookingId\", \"\");",
+                  "pm.environment.set(\"runFirstname\", \"Bogdan_\" + pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P02: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"P02: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"P02: token\", () => { const d = pm.response.json(); pm.expect(d.token).to.be.a(\"string\").and.not.empty; });",
+                  "if (pm.response.code === 200) { try { const d = pm.response.json(); if (typeof d.token === \"string\" && d.token.length) pm.environment.set(\"token\", d.token); } catch (e) { console.error(e.message); } }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N01 Неверный логин",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/auth",
+            "description": "ID: N01\nЦель: Неверный логин.\nВходные данные: {\"username\": \"wrong-admin\", \"password\": \"password123\"}.\nОжидаемый результат: HTTP 200; reason = Bad credentials, token отсутствует.\nОснование ожидания: документация Restful-Booker.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"wrong-admin\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N01: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"N01: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"N01: отказ в выдаче токена\", () => { const d = pm.response.json(); pm.expect(d.reason).to.equal(\"Bad credentials\"); pm.expect(d).not.to.have.property(\"token\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N02 Неверный пароль",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/auth",
+            "description": "ID: N02\nЦель: Неверный пароль.\nВходные данные: {\"username\": \"admin\", \"password\": \"wrong-password\"}.\nОжидаемый результат: HTTP 200; reason = Bad credentials, token отсутствует.\nОснование ожидания: документация Restful-Booker.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"wrong-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N02: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"N02: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"N02: отказ в выдаче токена\", () => { const d = pm.response.json(); pm.expect(d.reason).to.equal(\"Bad credentials\"); pm.expect(d).not.to.have.property(\"token\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Booking",
+      "item": [
+        {
+          "name": "P03 Создание бронирования",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking",
+            "description": "ID: P03\nЦель: Создание бронирования.\nВходные данные: полное валидное тело, цена 150.\nОжидаемый результат: HTTP 200; bookingid > 0 и booking совпадает с запросом; сохранить bookingId.\nОснование ожидания: документация Restful-Booker.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Savvin\",\n  \"totalprice\": 150,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-01-10\",\n    \"checkout\": \"2027-01-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P03: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"P03: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"P03: созданная запись\", () => { const d = pm.response.json(); pm.expect(d.bookingid).to.be.a(\"number\").above(0); pm.expect(d.bookingid % 1).to.equal(0); pm.expect(d.booking).to.deep.equal(JSON.parse(pm.variables.replaceIn(pm.request.body.raw))); });",
+                  "if (pm.response.code === 200) { try { const d = pm.response.json(); if (Number.isInteger(d.bookingid) && d.bookingid > 0) pm.environment.set(\"bookingId\", String(d.bookingid)); } catch (e) { console.error(e.message); } }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P04 Получение созданной записи",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: P04\nЦель: Получение созданной записи.\nВходные данные: bookingId из P03.\nОжидаемый результат: HTTP 200; все поля совпадают с P03.\nОснование ожидания: документация Restful-Booker."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P04: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"P04: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"P04: поля записи\", () => { const expected = JSON.parse(pm.variables.replaceIn(\"{\\\"firstname\\\": \\\"{{runFirstname}}\\\", \\\"lastname\\\": \\\"Savvin\\\", \\\"totalprice\\\": 150, \\\"depositpaid\\\": true, \\\"bookingdates\\\": {\\\"checkin\\\": \\\"2027-01-10\\\", \\\"checkout\\\": \\\"2027-01-15\\\"}, \\\"additionalneeds\\\": \\\"Breakfast\\\"}\")); pm.expect(pm.response.json()).to.deep.equal(expected); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P05 Список с фильтром firstname",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking?firstname={{runFirstname}}",
+            "description": "ID: P05\nЦель: Список с фильтром firstname.\nВходные данные: уникальный firstname из P03.\nОжидаемый результат: HTTP 200; массив содержит bookingId.\nОснование ожидания: документация Restful-Booker."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P05: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"P05: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"P05: ID в списке\", () => { const d = pm.response.json(); pm.expect(d).to.be.an(\"array\"); pm.expect(d.map(x => x.bookingid)).to.include(Number(pm.environment.get(\"bookingId\"))); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P06 Полное обновление PUT",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: P06\nЦель: Полное обновление PUT.\nВходные данные: Cookie token; полное тело: lastname=SavvinUpdated, totalprice=250.\nОжидаемый результат: HTTP 200; все поля совпадают с PUT.\nОснование ожидания: документация Restful-Booker.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"SavvinUpdated\",\n  \"totalprice\": 250,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-01-10\",\n    \"checkout\": \"2027-01-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P06: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"P06: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"P06: полное обновление\", () => { pm.expect(pm.response.json()).to.deep.equal(JSON.parse(pm.variables.replaceIn(pm.request.body.raw))); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P07 Частичное обновление PATCH",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: P07\nЦель: Частичное обновление PATCH.\nВходные данные: Cookie token; additionalneeds=Late checkout.\nОжидаемый результат: HTTP 200; поле изменено, остальные поля сохранены.\nОснование ожидания: документация Restful-Booker.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"additionalneeds\": \"Late checkout\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P07: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"P07: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"P07: частичное обновление\", () => { const expected = JSON.parse(pm.variables.replaceIn(\"{\\\"firstname\\\": \\\"{{runFirstname}}\\\", \\\"lastname\\\": \\\"SavvinUpdated\\\", \\\"totalprice\\\": 250, \\\"depositpaid\\\": true, \\\"bookingdates\\\": {\\\"checkin\\\": \\\"2027-01-10\\\", \\\"checkout\\\": \\\"2027-01-15\\\"}, \\\"additionalneeds\\\": \\\"Late checkout\\\"}\")); pm.expect(pm.response.json()).to.deep.equal(expected); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P08 Проверка сохранения обновлений",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: P08\nЦель: Проверка сохранения обновлений.\nВходные данные: bookingId.\nОжидаемый результат: HTTP 200; PUT и PATCH сохранены на сервере.\nОснование ожидания: документация Restful-Booker."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P08: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"P08: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"P08: изменения сохранены\", () => { const expected = JSON.parse(pm.variables.replaceIn(\"{\\\"firstname\\\": \\\"{{runFirstname}}\\\", \\\"lastname\\\": \\\"SavvinUpdated\\\", \\\"totalprice\\\": 250, \\\"depositpaid\\\": true, \\\"bookingdates\\\": {\\\"checkin\\\": \\\"2027-01-10\\\", \\\"checkout\\\": \\\"2027-01-15\\\"}, \\\"additionalneeds\\\": \\\"Late checkout\\\"}\")); pm.expect(pm.response.json()).to.deep.equal(expected); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N03 PUT без токена",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N03\nЦель: PUT без токена.\nВходные данные: собственная запись; Cookie отсутствует.\nОжидаемый результат: HTTP 403; Forbidden; изменение запрещено.\nОснование ожидания: документация Restful-Booker.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Savvin\",\n  \"totalprice\": 150,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-01-10\",\n    \"checkout\": \"2027-01-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N03: HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"N03: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"N03: Forbidden\", () => { pm.expect(pm.response.text()).to.equal(\"Forbidden\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N04 PUT с неверным токеном",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token=invalid-lab-token"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N04\nЦель: PUT с неверным токеном.\nВходные данные: собственная запись; token=invalid-lab-token.\nОжидаемый результат: HTTP 403; Forbidden; изменение запрещено.\nОснование ожидания: документация Restful-Booker.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Savvin\",\n  \"totalprice\": 150,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-01-10\",\n    \"checkout\": \"2027-01-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N04: HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"N04: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"N04: Forbidden\", () => { pm.expect(pm.response.text()).to.equal(\"Forbidden\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N05 PATCH без токена",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N05\nЦель: PATCH без токена.\nВходные данные: собственная запись; Cookie отсутствует.\nОжидаемый результат: HTTP 403; Forbidden; изменение запрещено.\nОснование ожидания: документация Restful-Booker.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"UnauthorizedChange\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N05: HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"N05: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"N05: Forbidden\", () => { pm.expect(pm.response.text()).to.equal(\"Forbidden\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N06 PATCH с неверным токеном",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token=invalid-lab-token"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N06\nЦель: PATCH с неверным токеном.\nВходные данные: собственная запись; token=invalid-lab-token.\nОжидаемый результат: HTTP 403; Forbidden; изменение запрещено.\nОснование ожидания: документация Restful-Booker.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"UnauthorizedChange\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N06: HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"N06: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"N06: Forbidden\", () => { pm.expect(pm.response.text()).to.equal(\"Forbidden\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N07 DELETE без токена",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N07\nЦель: DELETE без токена.\nВходные данные: собственная запись; Cookie отсутствует.\nОжидаемый результат: HTTP 403; Forbidden; изменение запрещено.\nОснование ожидания: документация Restful-Booker."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N07: HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"N07: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"N07: Forbidden\", () => { pm.expect(pm.response.text()).to.equal(\"Forbidden\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N08 DELETE с неверным токеном",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token=invalid-lab-token"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N08\nЦель: DELETE с неверным токеном.\nВходные данные: собственная запись; token=invalid-lab-token.\nОжидаемый результат: HTTP 403; Forbidden; изменение запрещено.\nОснование ожидания: документация Restful-Booker."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N08: HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"N08: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"N08: Forbidden\", () => { pm.expect(pm.response.text()).to.equal(\"Forbidden\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N09 Несуществующий ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{missingBookingId}}",
+            "description": "ID: N09\nЦель: Несуществующий ID.\nВходные данные: id=999999999.\nОжидаемый результат: HTTP 404; Not Found.\nОснование ожидания: документация Restful-Booker."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N09: HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"N09: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"N09: Not Found\", () => { pm.expect(pm.response.text()).to.equal(\"Not Found\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N10 Некорректный JSON",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N10\nЦель: Некорректный JSON.\nВходные данные: Cookie token; JSON обрезан после {\"firstname\":.\nОжидаемый результат: HTTP 400; ошибка разбора; нет успешного ответа.\nОснование ожидания: синтаксис JSON / ожидаемый REST-код.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"firstname\":",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N10: HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"N10: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"N10: сервер отклонил запрос без успешной записи\", () => {",
+                  "  pm.expect(pm.response.code).to.be.within(400, 499);",
+                  "  pm.expect(pm.response.text()).not.to.equal(\"\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N11 Строка вместо числовой цены",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N11\nЦель: Строка вместо числовой цены.\nВходные данные: totalprice=\"abc\", остальные поля валидны.\nОжидаемый результат: HTTP 400; ошибка типа данных.\nОснование ожидания: документация задаёт totalprice как Number; код 400 — ожидаемая валидация.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Savvin\",\n  \"totalprice\": \"abc\",\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-01-10\",\n    \"checkout\": \"2027-01-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N11: HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"N11: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"N11: сервер отклонил запрос без успешной записи\", () => {",
+                  "  pm.expect(pm.response.code).to.be.within(400, 499);",
+                  "  pm.expect(pm.response.text()).not.to.equal(\"\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N12 Отсутствует обязательное поле firstname",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N12\nЦель: Отсутствует обязательное поле firstname.\nВходные данные: полное тело без firstname.\nОжидаемый результат: HTTP 400; ошибка обязательного поля.\nОснование ожидания: обязательное поле по документации; код 400 — ожидаемая валидация.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lastname\": \"Savvin\",\n  \"totalprice\": 150,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-01-10\",\n    \"checkout\": \"2027-01-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N12: HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"N12: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"N12: сервер отклонил запрос без успешной записи\", () => {",
+                  "  pm.expect(pm.response.code).to.be.within(400, 499);",
+                  "  pm.expect(pm.response.text()).not.to.equal(\"\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N13 Отсутствует обязательное поле bookingdates",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N13\nЦель: Отсутствует обязательное поле bookingdates.\nВходные данные: полное тело без bookingdates.\nОжидаемый результат: HTTP 400; ошибка обязательного поля.\nОснование ожидания: обязательное поле по документации; код 400 — ожидаемая валидация.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Savvin\",\n  \"totalprice\": 150,\n  \"depositpaid\": true,\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N13: HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"N13: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"N13: сервер отклонил запрос без успешной записи\", () => {",
+                  "  pm.expect(pm.response.code).to.be.within(400, 499);",
+                  "  pm.expect(pm.response.text()).not.to.equal(\"\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N14 Неподдерживаемый метод",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/ping",
+            "description": "ID: N14\nЦель: Неподдерживаемый метод.\nВходные данные: POST без тела.\nОжидаемый результат: HTTP 405; Method Not Allowed и заголовок Allow.\nОснование ожидания: гипотеза REST: ресурс существует, POST не описан; 405 не гарантирован документацией."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N14: HTTP 405\", () => pm.response.to.have.status(405));",
+                  "pm.test(\"N14: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"N14: Allow\", () => { pm.expect(pm.response.headers.get(\"Allow\")).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B01 Пустые строки",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: B01\nЦель: Пустые строки.\nВходные данные: firstname=\"\", lastname=\"\".\nОжидаемый результат: HTTP 400; ошибка валидации.\nОснование ожидания: гипотеза валидации: разумное правило для бронирования; в задании нет формального бизнес-контракта.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"\",\n  \"lastname\": \"\",\n  \"totalprice\": 150,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-01-10\",\n    \"checkout\": \"2027-01-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B01: HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"B01: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"B01: сервер отклонил запрос без успешной записи\", () => {",
+                  "  pm.expect(pm.response.code).to.be.within(400, 499);",
+                  "  pm.expect(pm.response.text()).not.to.equal(\"\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B02 Длинная строка",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: B02\nЦель: Длинная строка.\nВходные данные: firstname: 1001 символ A.\nОжидаемый результат: HTTP 200; значение принято без искажения.\nОснование ожидания: документация не задаёт верхнюю границу, ноль не запрещён.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{longString}}\",\n  \"lastname\": \"Savvin\",\n  \"totalprice\": 150,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-01-10\",\n    \"checkout\": \"2027-01-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B02: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"B02: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"B02: данные без искажения\", () => { pm.expect(pm.response.json()).to.deep.equal(JSON.parse(pm.variables.replaceIn(pm.request.body.raw))); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B03 Нулевая цена",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: B03\nЦель: Нулевая цена.\nВходные данные: totalprice=0.\nОжидаемый результат: HTTP 200; значение принято без искажения.\nОснование ожидания: документация не задаёт верхнюю границу, ноль не запрещён.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Savvin\",\n  \"totalprice\": 0,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-01-10\",\n    \"checkout\": \"2027-01-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B03: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"B03: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"B03: данные без искажения\", () => { pm.expect(pm.response.json()).to.deep.equal(JSON.parse(pm.variables.replaceIn(pm.request.body.raw))); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B04 Отрицательная цена",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: B04\nЦель: Отрицательная цена.\nВходные данные: totalprice=-1.\nОжидаемый результат: HTTP 400; ошибка валидации.\nОснование ожидания: гипотеза валидации: разумное правило для бронирования; в задании нет формального бизнес-контракта.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Savvin\",\n  \"totalprice\": -1,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-01-10\",\n    \"checkout\": \"2027-01-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B04: HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"B04: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"B04: сервер отклонил запрос без успешной записи\", () => {",
+                  "  pm.expect(pm.response.code).to.be.within(400, 499);",
+                  "  pm.expect(pm.response.text()).not.to.equal(\"\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B05 Очень большая цена",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: B05\nЦель: Очень большая цена.\nВходные данные: totalprice=1000000000000.\nОжидаемый результат: HTTP 200; значение принято без искажения.\nОснование ожидания: документация не задаёт верхнюю границу, ноль не запрещён.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Savvin\",\n  \"totalprice\": 1000000000000,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-01-10\",\n    \"checkout\": \"2027-01-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B05: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"B05: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"B05: данные без искажения\", () => { pm.expect(pm.response.json()).to.deep.equal(JSON.parse(pm.variables.replaceIn(pm.request.body.raw))); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B06 Выезд раньше заезда",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: B06\nЦель: Выезд раньше заезда.\nВходные данные: checkin=2027-01-15, checkout=2027-01-10.\nОжидаемый результат: HTTP 400; ошибка валидации.\nОснование ожидания: гипотеза валидации: разумное правило для бронирования; в задании нет формального бизнес-контракта.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Savvin\",\n  \"totalprice\": 150,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-01-15\",\n    \"checkout\": \"2027-01-10\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B06: HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"B06: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"B06: сервер отклонил запрос без успешной записи\", () => {",
+                  "  pm.expect(pm.response.code).to.be.within(400, 499);",
+                  "  pm.expect(pm.response.text()).not.to.equal(\"\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B07 Невалидный формат даты",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: B07\nЦель: Невалидный формат даты.\nВходные данные: checkin=not-a-date.\nОжидаемый результат: HTTP 400; ошибка валидации.\nОснование ожидания: гипотеза валидации: разумное правило для бронирования; в задании нет формального бизнес-контракта.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Savvin\",\n  \"totalprice\": 150,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"not-a-date\",\n    \"checkout\": \"2027-01-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B07: HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"B07: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"B07: сервер отклонил запрос без успешной записи\", () => {",
+                  "  pm.expect(pm.response.code).to.be.within(400, 499);",
+                  "  pm.expect(pm.response.text()).not.to.equal(\"\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P09 Удаление созданной записи",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: P09\nЦель: Удаление созданной записи.\nВходные данные: свой bookingId; Cookie token.\nОжидаемый результат: HTTP 201; Created; запись удалена.\nОснование ожидания: документация Restful-Booker."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P09: HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"P09: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"P09: тело Created\", () => { pm.expect(pm.response.text()).to.equal(\"Created\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P10 Получение после удаления",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: P10\nЦель: Получение после удаления.\nВходные данные: тот же bookingId.\nОжидаемый результат: HTTP 404; Not Found.\nОснование ожидания: документация Restful-Booker."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P10: HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"P10: время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\"))));",
+                  "pm.test(\"P10: запись отсутствует\", () => { pm.expect(pm.response.text()).to.equal(\"Not Found\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
