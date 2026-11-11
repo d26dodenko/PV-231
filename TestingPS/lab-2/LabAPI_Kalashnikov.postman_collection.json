@@ -1,0 +1,1686 @@
+{
+  "info": {
+    "_postman_id": "c4481cec-5a5f-5a32-b1af-374ec4631e5e",
+    "name": "LabAPI_Kalashnikov",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Лабораторная №2 по тестированию (файл задания Laba-2.md озаглавлен лабораторной №3). Restful-Booker. Весь запуск в Postman Collection Runner, 1 итерация. Сценарии включают намеренно спорные предположения о валидации, поэтому часть проверок может падать: это материал для отчёта, а не поломка коллекции."
+  },
+  "item": [
+    {
+      "name": "Health",
+      "description": "Запросы по ресурсу Health",
+      "item": [
+        {
+          "name": "H01 · Проверка работоспособности",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain"
+              }
+            ],
+            "url": "{{baseUrl}}/ping",
+            "description": "ID: H01\nТип: Health.\nЦель: Проверить доступность сервиса.\nВходные данные: без тела запроса\nОжидаемый HTTP: 201.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "",
+                  "pm.environment.set(\"token\", \"\");",
+                  "pm.environment.set(\"bookingId\", \"\");",
+                  "pm.environment.set(\"runLog\", \"[]\");",
+                  "pm.environment.set(\"runFirstname\", \"LabK\" + Date.now());",
+                  "pm.environment.set(\"longString\", \"A\".repeat(1001));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"H01 · код HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"H01 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"H01 · проверка содержимого\", () => { pm.expect(pm.response.text()).to.include(\"Created\"); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"H01\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/ping\", expected: 201, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "description": "Запросы по ресурсу Auth",
+      "item": [
+        {
+          "name": "A01 · Получение токена",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth",
+            "description": "ID: A01\nТип: Auth.\nЦель: Авторизоваться учётной записью учебного API.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 200.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A01 · код HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"A01 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"A01 · проверка содержимого\", () => { const d=pm.response.json(); pm.expect(d.token).to.be.a(\"string\").and.not.empty; });",
+                  "if (pm.response.code === 200) { try { const d=pm.response.json(); if(typeof d.token === \"string\" && d.token) pm.environment.set(\"token\",d.token); } catch(e){} }",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"A01\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/auth\", expected: 200, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A02 · Неверный логин",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth",
+            "description": "ID: A02\nТип: Auth.\nЦель: Проверить отказ во входе с неправильным логином.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 200.\nОснование ожидания: Пример поведения авторизации в API (ошибка в теле при HTTP 200).\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"wrong-admin\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A02 · код HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"A02 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"A02 · проверка содержимого\", () => { const d=pm.response.json(); pm.expect(d.reason).to.eql(\"Bad credentials\"); pm.expect(d).not.to.have.property(\"token\"); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"A02\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/auth\", expected: 200, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A03 · Неверный пароль",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth",
+            "description": "ID: A03\nТип: Auth.\nЦель: Проверить отказ во входе с неправильным паролем.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 200.\nОснование ожидания: Пример поведения авторизации в API (ошибка в теле при HTTP 200).\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"wrong-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A03 · код HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"A03 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"A03 · проверка содержимого\", () => { const d=pm.response.json(); pm.expect(d.reason).to.eql(\"Bad credentials\"); pm.expect(d).not.to.have.property(\"token\"); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"A03\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/auth\", expected: 200, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Booking",
+      "description": "Запросы по ресурсу Booking",
+      "item": [
+        {
+          "name": "P01 · Создание бронирования",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/booking",
+            "description": "ID: P01\nТип: Booking.\nЦель: Создать тестовое бронирование, сохранить bookingid.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 200.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Kalashnikov\",\n  \"totalprice\": 150,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-02-10\",\n    \"checkout\": \"2027-02-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P01 · код HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"P01 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"P01 · проверка содержимого\", () => { const d=pm.response.json(); pm.expect(d.bookingid).to.be.a(\"number\").and.above(0); pm.expect(d.booking.firstname).to.eql(pm.environment.get(\"runFirstname\")); });",
+                  "if(pm.response.code===200) { try { const d=pm.response.json(); if(Number.isInteger(d.bookingid)) pm.environment.set(\"bookingId\",String(d.bookingid)); } catch(e){} }",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"P01\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking\", expected: 200, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P02 · Получение бронирования по ID",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: P02\nТип: Booking.\nЦель: Получить свою запись по динамическому bookingId.\nВходные данные: без тела запроса\nОжидаемый HTTP: 200.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P02 · код HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"P02 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"P02 · проверка содержимого\", () => { const d=pm.response.json(); pm.expect(d.firstname).to.eql(pm.environment.get(\"runFirstname\")); pm.expect(d.totalprice).to.eql(150); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"P02\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 200, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P03 · Список бронирований",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/booking",
+            "description": "ID: P03\nТип: Booking.\nЦель: Получить массив идентификаторов.\nВходные данные: без тела запроса\nОжидаемый HTTP: 200.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P03 · код HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"P03 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"P03 · проверка содержимого\", () => { const d=pm.response.json(); pm.expect(d).to.be.an(\"array\"); pm.expect(d.some(x=>String(x.bookingid)===String(pm.environment.get(\"bookingId\")))).to.eql(true); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"P03\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking\", expected: 200, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P04 · Поиск по имени",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/booking?firstname={{runFirstname}}",
+            "description": "ID: P04\nТип: Booking.\nЦель: Найти своё бронирование с помощью фильтра по имени.\nВходные данные: без тела запроса\nОжидаемый HTTP: 200.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P04 · код HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"P04 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"P04 · проверка содержимого\", () => { const d=pm.response.json(); pm.expect(d).to.be.an(\"array\"); pm.expect(d.some(x=>String(x.bookingid)===String(pm.environment.get(\"bookingId\")))).to.eql(true); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"P04\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking?firstname={{runFirstname}}\", expected: 200, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P05 · Полное изменение PUT",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: P05\nТип: Booking.\nЦель: Изменить фамилию и цену, используя сохранённый токен.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 200.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Updated\",\n  \"totalprice\": 250,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-02-10\",\n    \"checkout\": \"2027-02-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P05 · код HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"P05 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"P05 · проверка содержимого\", () => { const d=pm.response.json(); pm.expect(d.lastname).to.eql(\"Updated\"); pm.expect(d.totalprice).to.eql(250); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"P05\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 200, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P06 · Частичное изменение PATCH",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: P06\nТип: Booking.\nЦель: Изменить поле additionalneeds без изменения остальных полей.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 200.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"additionalneeds\": \"Late checkout\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P06 · код HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"P06 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"P06 · проверка содержимого\", () => { const d=pm.response.json(); pm.expect(d.additionalneeds).to.eql(\"Late checkout\"); pm.expect(d.totalprice).to.eql(250); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"P06\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 200, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P07 · Контроль сохранения PUT и PATCH",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: P07\nТип: Booking.\nЦель: Убедиться, что изменения сохранены в API.\nВходные данные: без тела запроса\nОжидаемый HTTP: 200.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P07 · код HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"P07 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"P07 · проверка содержимого\", () => { const d=pm.response.json(); pm.expect(d.lastname).to.eql(\"Updated\"); pm.expect(d.additionalneeds).to.eql(\"Late checkout\"); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"P07\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 200, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N01 · PUT без токена",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N01\nТип: Booking.\nЦель: Запретить полное изменение без авторизации.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 403.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Updated\",\n  \"totalprice\": 250,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-02-10\",\n    \"checkout\": \"2027-02-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N01 · код HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"N01 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"N01 · проверка содержимого\", () => { pm.expect(pm.response.text()).to.match(/forbidden/i); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"N01\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 403, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N02 · PUT с неверным токеном",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token=invalid-lab-token"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N02\nТип: Booking.\nЦель: Запретить полное изменение с неверным токеном.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 403.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Updated\",\n  \"totalprice\": 250,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-02-10\",\n    \"checkout\": \"2027-02-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N02 · код HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"N02 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"N02 · проверка содержимого\", () => { pm.expect(pm.response.text()).to.match(/forbidden/i); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"N02\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 403, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N03 · PATCH без токена",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N03\nТип: Booking.\nЦель: Запретить частичное изменение без авторизации.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 403.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"additionalneeds\": \"InvalidChange\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N03 · код HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"N03 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"N03 · проверка содержимого\", () => { pm.expect(pm.response.text()).to.match(/forbidden/i); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"N03\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 403, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N04 · PATCH с неверным токеном",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token=invalid-lab-token"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N04\nТип: Booking.\nЦель: Запретить частичное изменение с неверным токеном.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 403.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"additionalneeds\": \"InvalidChange\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N04 · код HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"N04 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"N04 · проверка содержимого\", () => { pm.expect(pm.response.text()).to.match(/forbidden/i); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"N04\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 403, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N05 · DELETE без токена",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N05\nТип: Booking.\nЦель: Запретить удаление без авторизации.\nВходные данные: без тела запроса\nОжидаемый HTTP: 403.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N05 · код HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"N05 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"N05 · проверка содержимого\", () => { pm.expect(pm.response.text()).to.match(/forbidden/i); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"N05\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 403, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N06 · DELETE с неверным токеном",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain"
+              },
+              {
+                "key": "Cookie",
+                "value": "token=invalid-lab-token"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N06\nТип: Booking.\nЦель: Запретить удаление с некорректным токеном.\nВходные данные: без тела запроса\nОжидаемый HTTP: 403.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N06 · код HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"N06 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"N06 · проверка содержимого\", () => { pm.expect(pm.response.text()).to.match(/forbidden/i); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"N06\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 403, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N07 · Несуществующий ID",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/999999999",
+            "description": "ID: N07\nТип: Booking.\nЦель: Получить несуществующее бронирование.\nВходные данные: без тела запроса\nОжидаемый HTTP: 404.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N07 · код HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"N07 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"N07 · проверка содержимого\", () => { pm.expect(pm.response.text()).to.match(/not found/i); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"N07\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/999999999\", expected: 404, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N08 · Некорректный JSON",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N08\nТип: Booking.\nЦель: Отправить намеренно обрезанный JSON.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 400.\nОснование ожидания: Ожидание корректной обработки ошибочного JSON (400).\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"firstname\":",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N08 · код HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"N08 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"N08 · проверка содержимого\", () => { pm.expect(pm.response.text().length).to.be.above(0); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"N08\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 400, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N09 · Неверный тип цены",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N09\nТип: Booking.\nЦель: Передать строку вместо числового totalprice.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 400.\nОснование ожидания: Гипотеза валидации: totalprice должен быть числом; конкретный код ошибки не закреплён.\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Kalashnikov\",\n  \"totalprice\": \"abc\",\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-02-10\",\n    \"checkout\": \"2027-02-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N09 · код HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"N09 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"N09 · проверка содержимого\", () => { if(pm.response.code===200) { const d=pm.response.json(); pm.expect(d.totalprice).to.be.a(\"number\"); } else {pm.expect(pm.response.text().length).to.be.above(0);} });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"N09\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 400, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N10 · Отсутствует firstname",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N10\nТип: Booking.\nЦель: Проверить реакцию на отсутствие поля firstname.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 400.\nОснование ожидания: Гипотеза валидации: отсутствие обязательного поля → 400.\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lastname\": \"Kalashnikov\",\n  \"totalprice\": 150,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-02-10\",\n    \"checkout\": \"2027-02-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N10 · код HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"N10 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"N10 · проверка содержимого\", () => { pm.expect(pm.response.text().length).to.be.above(0); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"N10\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 400, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N11 · Отсутствует bookingdates",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: N11\nТип: Booking.\nЦель: Проверить реакцию на отсутствие поля bookingdates.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 400.\nОснование ожидания: Гипотеза валидации: отсутствие обязательного поля → 400.\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Kalashnikov\",\n  \"totalprice\": 150,\n  \"depositpaid\": true,\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N11 · код HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"N11 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"N11 · проверка содержимого\", () => { pm.expect(pm.response.text().length).to.be.above(0); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"N11\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 400, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N12 · Неподдерживаемый метод POST /ping",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain"
+              }
+            ],
+            "url": "{{baseUrl}}/ping",
+            "description": "ID: N12\nТип: Booking.\nЦель: Проверить код ошибки для неподдерживаемого метода.\nВходные данные: без тела запроса\nОжидаемый HTTP: 405.\nОснование ожидания: Ожидаемая HTTP-семантика: 405 и заголовок Allow.\nФактический ответ фиксируется после прогона."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N12 · код HTTP 405\", () => pm.response.to.have.status(405));",
+                  "pm.test(\"N12 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"N12 · проверка содержимого\", () => { pm.expect(pm.response.headers.has(\"Allow\")).to.eql(true); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"N12\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/ping\", expected: 405, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "N13 · Невалидный JSON при создании",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/booking",
+            "description": "ID: N13\nТип: Booking.\nЦель: Попытка создать запись с синтаксически некорректным JSON.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 400.\nОснование ожидания: Гипотеза корректной обработки JSON: 400.\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"totalprice\":",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"N13 · код HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"N13 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"N13 · проверка содержимого\", () => { pm.expect(pm.response.text().length).to.be.above(0); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"N13\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking\", expected: 400, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B01 · Пустые имя и фамилия",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: B01\nТип: Booking.\nЦель: Проверить валидацию пустых строк.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 400.\nОснование ожидания: Гипотеза бизнес-валидации: пустые имена запрещены (не подтверждено документацией).\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"\",\n  \"lastname\": \"\",\n  \"totalprice\": 150,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-02-10\",\n    \"checkout\": \"2027-02-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B01 · код HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"B01 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"B01 · проверка содержимого\", () => { if(pm.response.code===200){ const d=pm.response.json(); pm.expect(d.firstname).not.to.eql(\"\"); } else pm.expect(pm.response.text().length).to.be.above(0); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"B01\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 400, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B02 · Строка длиной 1001 символ",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: B02\nТип: Booking.\nЦель: Проверить обработку очень длинного имени.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 200.\nОснование ожидания: Нет документированного ограничения на длину, проверяем сохранность значения.\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{longString}}\",\n  \"lastname\": \"Kalashnikov\",\n  \"totalprice\": 150,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-02-10\",\n    \"checkout\": \"2027-02-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B02 · код HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"B02 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"B02 · проверка содержимого\", () => { const d=pm.response.json(); pm.expect(d.firstname).to.eql(pm.environment.get(\"longString\")); pm.expect(d.firstname.length).to.eql(1001); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"B02\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 200, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B03 · Нулевая цена",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: B03\nТип: Booking.\nЦель: Проверить totalprice=0.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 200.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Kalashnikov\",\n  \"totalprice\": 0,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-02-10\",\n    \"checkout\": \"2027-02-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B03 · код HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"B03 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"B03 · проверка содержимого\", () => { const d=pm.response.json(); pm.expect(d.totalprice).to.eql(0); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"B03\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 200, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B04 · Отрицательная цена",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: B04\nТип: Booking.\nЦель: Проверить totalprice=-1.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 400.\nОснование ожидания: Гипотеза бизнес-валидации: цена не должна быть отрицательной (не подтверждено документацией).\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Kalashnikov\",\n  \"totalprice\": -1,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-02-10\",\n    \"checkout\": \"2027-02-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B04 · код HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"B04 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"B04 · проверка содержимого\", () => { if(pm.response.code===200) {const d=pm.response.json(); pm.expect(d.totalprice).to.be.at.least(0);} else pm.expect(pm.response.text().length).to.be.above(0); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"B04\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 400, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B05 · Очень большая цена",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: B05\nТип: Booking.\nЦель: Проверить totalprice=1000000000000.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 200.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Kalashnikov\",\n  \"totalprice\": 1000000000000,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-02-10\",\n    \"checkout\": \"2027-02-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B05 · код HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"B05 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"B05 · проверка содержимого\", () => { const d=pm.response.json(); pm.expect(d.totalprice).to.eql(1000000000000); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"B05\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 200, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B06 · Дата выезда раньше заезда",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: B06\nТип: Booking.\nЦель: Проверить перепутанный порядок дат.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 400.\nОснование ожидания: Гипотеза бизнес-валидации дат (в API может отсутствовать).\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Kalashnikov\",\n  \"totalprice\": 150,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"2027-02-15\",\n    \"checkout\": \"2027-02-10\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B06 · код HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"B06 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"B06 · проверка содержимого\", () => { if(pm.response.code===200){const d=pm.response.json(); pm.expect(d.bookingdates.checkout> d.bookingdates.checkin).to.eql(true);} else pm.expect(pm.response.text().length).to.be.above(0); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"B06\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 400, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B07 · Неверный формат даты",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: B07\nТип: Booking.\nЦель: Проверить checkin=not-a-date.\nВходные данные: тело JSON, см. вкладку Body\nОжидаемый HTTP: 400.\nОснование ожидания: Гипотеза валидации: неверный формат даты должен отклоняться.\nФактический ответ фиксируется после прогона.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"{{runFirstname}}\",\n  \"lastname\": \"Kalashnikov\",\n  \"totalprice\": 150,\n  \"depositpaid\": true,\n  \"bookingdates\": {\n    \"checkin\": \"not-a-date\",\n    \"checkout\": \"2027-02-15\"\n  },\n  \"additionalneeds\": \"Breakfast\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B07 · код HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"B07 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"B07 · проверка содержимого\", () => { if(pm.response.code===200){const d=pm.response.json(); pm.expect(d.bookingdates.checkin).to.match(/^\\d{4}-\\d{2}-\\d{2}$/);} else pm.expect(pm.response.text().length).to.be.above(0); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"B07\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 400, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P08 · Удаление тестовой записи",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: P08\nТип: Booking.\nЦель: Удалить только созданную в текущем прогоне запись.\nВходные данные: без тела запроса\nОжидаемый HTTP: 201.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P08 · код HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"P08 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"P08 · проверка содержимого\", () => { pm.expect(pm.response.text().length).to.be.below(300); });",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"P08\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 201, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P09 · Проверка удаления GET 404",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain"
+              }
+            ],
+            "url": "{{baseUrl}}/booking/{{bookingId}}",
+            "description": "ID: P09\nТип: Booking.\nЦель: Подтвердить удаление повторным GET.\nВходные данные: без тела запроса\nОжидаемый HTTP: 404.\nОснование ожидания: Документация API.\nФактический ответ фиксируется после прогона."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"P09 · код HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"P09 · время ответа < maxResponseMs\", () => pm.expect(pm.response.responseTime).to.be.below(Number(pm.environment.get(\"maxResponseMs\") || 5000)));",
+                  "pm.test(\"P09 · проверка содержимого\", () => { pm.expect(pm.response.text()).to.match(/not found/i); });",
+                  "pm.environment.set(\"token\", \"\");",
+                  "",
+                  "// Сохраняем только метрики и HTTP-коды, без токена и персональных данных.",
+                  "try {",
+                  "  const all = JSON.parse(pm.environment.get(\"runLog\") || \"[]\");",
+                  "  all.push({ id: \"P09\", request: pm.info.requestName, method: pm.request.method,",
+                  "    endpoint: \"/booking/{{bookingId}}\", expected: 404, actual: pm.response.code,",
+                  "    responseTimeMs: pm.response.responseTime });",
+                  "  pm.environment.set(\"runLog\", JSON.stringify(all));",
+                  "} catch (err) { console.warn(\"runLog не удалось обновить\", err); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
